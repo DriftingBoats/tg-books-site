@@ -22,6 +22,8 @@ if not settings.bot_token:
     logger.warning("TG_BOT_TOKEN not set; bot sync will be disabled.")
 if not settings.book_chat_id:
     logger.warning("TG_BOOK_CHAT_ID not set; bot sync will be disabled.")
+if settings.cleanup_interval > 0 and not settings.maint_chat_id:
+    logger.warning("TG_MAINT_CHAT_ID not set; cleanup will be disabled.")
 
 db = Database(settings.db_path)
 
@@ -33,6 +35,9 @@ def on_startup() -> None:
     db.init()
     if settings.bot_token and settings.book_chat_id:
         thread = threading.Thread(target=_poll_updates_loop, daemon=True)
+        thread.start()
+    if settings.bot_token and settings.cleanup_interval > 0 and settings.maint_chat_id:
+        thread = threading.Thread(target=_cleanup_loop, daemon=True)
         thread.start()
 
 
@@ -183,3 +188,45 @@ def _advance_offset(update_id: Optional[int]) -> None:
     if update_id is None:
         return
     db.set_meta("tg_offset", str(update_id + 1))
+
+
+def _cleanup_loop() -> None:
+    while True:
+        try:
+            _cleanup_deleted_messages()
+        except Exception as exc:
+            logger.exception("cleanup_failed: %s", exc)
+        time.sleep(settings.cleanup_interval)
+
+
+def _cleanup_deleted_messages() -> None:
+    if not settings.bot_token or not settings.maint_chat_id:
+        return
+    client = TelegramClient(settings.bot_token)
+    batch = 200
+    offset = 0
+    while True:
+        rows = db.list_books_basic(batch, offset)
+        if not rows:
+            break
+        for row in rows:
+            book_id = int(row["id"])
+            chat_id = row["tg_chat_id"]
+            message_id = int(row["tg_message_id"])
+            try:
+                result = client.copy_message(settings.maint_chat_id, chat_id, message_id)
+                copied_id = result.get("result", {}).get("message_id")
+                if copied_id:
+                    try:
+                        client.delete_message(settings.maint_chat_id, int(copied_id))
+                    except Exception:
+                        pass
+            except Exception as exc:
+                reason = str(exc)
+                if "message to copy not found" in reason or "MESSAGE_ID_INVALID" in reason:
+                    db.delete_book(book_id)
+                    logger.info("Removed deleted TG message %s", message_id)
+                else:
+                    logger.warning("copy_message_failed: %s", exc)
+            time.sleep(0.2)
+        offset += batch

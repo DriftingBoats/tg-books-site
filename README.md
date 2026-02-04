@@ -14,8 +14,10 @@ Create a `.env` or export variables:
 ```
 TG_BOT_TOKEN=...
 TG_BOOK_CHAT_ID=...   # group id like -1001234567890
+TG_MAINT_CHAT_ID=...  # maintenance group id for cleanup (optional)
 THAIGL_DB_PATH=./data/thaigl.db
 FRONTEND_DIST=./frontend/dist
+TG_CLEANUP_INTERVAL=0  # seconds; set to >0 to enable auto cleanup
 ```
 
 ## Backend
@@ -44,18 +46,12 @@ Tags: tag1, tag2
 Source: tg
 ```
 
-## Remove items
-Telegram does not notify bots about deletions. Use one of these:
+## Auto cleanup
+Telegram does not notify bots about deletions. Auto cleanup is implemented by
+attempting to copy each message to a maintenance group. If the copy fails with
+\"message to copy not found\", the record is removed from the database.
 
-1. In the group, reply to a book message with:
-```
-/remove
-```
-or
-```
-/remove <message_id>
-```
-2. In the UI, click "Remove from list" (DB only).
+Set `TG_MAINT_CHAT_ID` and `TG_CLEANUP_INTERVAL` (seconds) to enable this.
 
 ## Notes
 - Bot must be admin and privacy mode disabled in the book group.

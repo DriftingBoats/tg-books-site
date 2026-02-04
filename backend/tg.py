@@ -37,6 +37,12 @@ class TelegramClient:
     def delete_message(self, chat_id: str, message_id: int) -> Dict[str, Any]:
         return self._post("deleteMessage", json={"chat_id": chat_id, "message_id": message_id})
 
+    def copy_message(self, chat_id: str, from_chat_id: str, message_id: int) -> Dict[str, Any]:
+        return self._post(
+            "copyMessage",
+            json={"chat_id": chat_id, "from_chat_id": from_chat_id, "message_id": message_id},
+        )
+
     def _get(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
         resp = self.http.get(f"{self.base_url}/{method}", params=params)
         resp.raise_for_status()

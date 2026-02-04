@@ -169,3 +169,10 @@ class Database:
     def recent_books(self, limit: int) -> List[sqlite3.Row]:
         with self.connect() as conn:
             return conn.execute("SELECT * FROM books ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()
+
+    def list_books_basic(self, limit: int, offset: int) -> List[sqlite3.Row]:
+        with self.connect() as conn:
+            return conn.execute(
+                "SELECT id, tg_chat_id, tg_message_id FROM books ORDER BY id ASC LIMIT ? OFFSET ?",
+                (limit, offset),
+            ).fetchall()

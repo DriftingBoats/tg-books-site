@@ -9,8 +9,10 @@ from pathlib import Path
 class Settings:
     bot_token: str
     book_chat_id: str
+    maint_chat_id: str
     db_path: Path
     poll_interval: float
+    cleanup_interval: float
     frontend_dist: Path | None
 
 
@@ -33,14 +35,18 @@ def load_settings() -> Settings:
     _load_dotenv()
     bot_token = os.getenv("TG_BOT_TOKEN", "").strip()
     book_chat_id = os.getenv("TG_BOOK_CHAT_ID", "").strip()
+    maint_chat_id = os.getenv("TG_MAINT_CHAT_ID", "").strip()
     db_path = Path(os.getenv("THAIGL_DB_PATH", "./data/thaigl.db")).resolve()
     poll_interval = float(os.getenv("TG_POLL_INTERVAL", "2.0"))
+    cleanup_interval = float(os.getenv("TG_CLEANUP_INTERVAL", "0"))
     frontend_dist_raw = os.getenv("FRONTEND_DIST", "").strip()
     frontend_dist = Path(frontend_dist_raw).resolve() if frontend_dist_raw else None
     return Settings(
         bot_token=bot_token,
         book_chat_id=book_chat_id,
+        maint_chat_id=maint_chat_id,
         db_path=db_path,
         poll_interval=poll_interval,
+        cleanup_interval=cleanup_interval,
         frontend_dist=frontend_dist,
     )
