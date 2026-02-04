@@ -71,6 +71,18 @@ body {
   max-width: 8rem;
 }
 
+.admin-pill {
+  margin: 0;
+  align-self: flex-start;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #0f172a;
+  background: #e2e8f0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+}
+
 .hero-stats {
   display: flex;
   gap: 1.5rem;
@@ -194,6 +206,27 @@ body {
   align-items: center;
 }
 
+.danger {
+  margin-top: 0.8rem;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.danger:hover {
+  border-color: rgba(239, 68, 68, 0.7);
+  background: #fecaca;
+}
+
+.danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .detail-actions .primary {
   background: #2563eb;

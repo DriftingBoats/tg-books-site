@@ -47,6 +47,12 @@ export default function App() {
   const [books, setBooks] = useState<Book[]>([]);
   const [selected, setSelected] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState(false);
+
+  const adminMode = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("admin") === "1";
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +96,22 @@ export default function App() {
       .map((item) => item.book);
   }, [books, selected]);
 
+  const removeSelected = async () => {
+    if (!selected) return;
+    if (!confirm("Remove this item from TG and the database?")) return;
+    setRemoving(true);
+    await fetch(`/api/books/${selected.id}?also_tg=true`, { method: "DELETE" });
+    setSelected(null);
+    setRemoving(false);
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("query", query.trim());
+    if (lang) params.set("lang", lang);
+    params.set("limit", "200");
+    const res = await fetch(`/api/books?${params.toString()}`);
+    const data: BooksResponse = await res.json();
+    setBooks(data.items);
+  };
+
   return (
     <div className="app">
       <header className="hero">
@@ -97,26 +119,27 @@ export default function App() {
           <p className="eyebrow">ThaiGL Library</p>
           <h1>Thai GL collection with fast search, clean metadata, and calm reading rooms.</h1>
         </div>
-        <div className="hero-panel">
-          <div className="search">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search title, author, tags"
-            />
-            <select value={lang} onChange={(event) => setLang(event.target.value)}>
-              {langOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="hero-stats">
-            <div>
-              <p className="stat-value">{books.length}</p>
-              <p className="stat-label">Visible titles</p>
+          <div className="hero-panel">
+            <div className="search">
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search title, author, tags"
+              />
+              <select value={lang} onChange={(event) => setLang(event.target.value)}>
+                {langOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
+            {adminMode && <p className="admin-pill">Admin mode</p>}
+            <div className="hero-stats">
+              <div>
+                <p className="stat-value">{books.length}</p>
+                <p className="stat-label">Visible titles</p>
+              </div>
             <div>
               <p className="stat-value">{lang ? lang.toUpperCase() : "ALL"}</p>
               <p className="stat-label">Language</p>
@@ -164,6 +187,11 @@ export default function App() {
                 </a>
                 <span className="pill">{selected.lang?.toUpperCase() || "-"}</span>
               </div>
+              {adminMode && (
+                <button className="danger" onClick={removeSelected} disabled={removing}>
+                  {removing ? "Removing..." : "Remove from TG"}
+                </button>
+              )}
             </div>
 
               <div className="detail-grid">
