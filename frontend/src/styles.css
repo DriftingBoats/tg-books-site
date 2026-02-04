@@ -106,7 +106,7 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 2rem;
   padding: 2rem 6vw 3.2rem;
 }
@@ -132,10 +132,6 @@ body {
   border-color: rgba(15, 23, 42, 0.18);
 }
 
-.card.selected {
-  border-color: #2563eb;
-  box-shadow: none;
-}
 
 .card-title {
   font-weight: 600;
@@ -186,163 +182,38 @@ body {
   color: #374151;
 }
 
-.detail {
-  position: sticky;
-  top: 2rem;
-  align-self: start;
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 1.5rem;
-  min-height: 420px;
-  box-shadow: none;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-}
-
-.detail-empty {
-  color: #5f6b7a;
-  font-size: 0.95rem;
-}
-
-.detail-header h2 {
-  margin: 0.6rem 0 0.2rem;
-  font-size: 1.7rem;
-  color: #0f172a;
-}
-
-.detail-label {
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  font-size: 0.7rem;
-  color: #64748b;
-}
-
-.detail-author {
-  margin: 0 0 1rem;
-  color: #475569;
-}
-
-.detail-actions {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.danger {
+.card-actions {
   margin-top: 0.8rem;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 0.5rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.danger:hover {
-  border-color: rgba(239, 68, 68, 0.7);
-  background: #fecaca;
-}
-
-.danger:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.detail-actions .primary {
-  background: #111827;
-  color: #fff;
-  padding: 0.55rem 0.95rem;
-  border-radius: 999px;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.pill {
-  border: 1px solid #e5e7eb;
-  color: #374151;
-  padding: 0.3rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-}
-
-.detail-grid {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.detail-key {
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  font-size: 0.65rem;
-  color: #64748b;
-  margin: 0 0 0.3rem;
-}
-
-.detail-value {
-  margin: 0;
-  font-weight: 600;
-}
-
-.detail-sub {
-  margin: 0.2rem 0 0;
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.tag-cloud {
   display: flex;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.78rem;
+  color: #6b7280;
   flex-wrap: wrap;
 }
 
-.tag-cloud span {
-  background: #f3f4f6;
-  padding: 0.3rem 0.6rem;
+.card-actions .download {
+  color: #111827;
+  text-decoration: none;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.card-actions .remove {
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 0.35rem 0.7rem;
   border-radius: 999px;
   font-size: 0.75rem;
-  color: #374151;
-}
-
-.tag-cloud .muted {
-  background: transparent;
-  color: #64748b;
-}
-
-.related {
-  margin-top: 1.8rem;
-}
-
-.related h3 {
-  margin: 0 0 0.6rem;
-  font-size: 1rem;
-}
-
-.related button {
-  width: 100%;
-  text-align: left;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: #ffffff;
-  padding: 0.6rem 0.8rem;
-  border-radius: 12px;
-  margin-bottom: 0.5rem;
   cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-family: inherit;
 }
 
-.related button span {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.related button em {
-  font-style: normal;
-  color: #64748b;
-  font-size: 0.8rem;
+.card-actions .remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .loading,
@@ -364,10 +235,6 @@ body {
 
   .layout {
     grid-template-columns: 1fr;
-  }
-
-  .detail {
-    position: static;
   }
 
   .search {
