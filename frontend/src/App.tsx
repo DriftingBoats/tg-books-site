@@ -49,15 +49,15 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState(false);
 
-  const adminMode = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("admin") === "1";
-  }, []);
-
   const adminKey = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("key") || "";
   }, []);
+
+  const adminMode = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("admin") === "1" && adminKey.length > 0;
+  }, [adminKey]);
 
   useEffect(() => {
     let cancelled = false;
