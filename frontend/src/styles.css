@@ -1,7 +1,7 @@
 :root {
   font-family: "Manrope", "Noto Sans SC", system-ui, sans-serif;
-  color: #15171a;
-  background: #f6f7f9;
+  color: #111827;
+  background: #ffffff;
 }
 
 * {
@@ -10,7 +10,7 @@
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, #f7f8fa 0%, #eef1f5 100%);
+  background: #ffffff;
   color: inherit;
 }
 
@@ -22,8 +22,9 @@ body {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   gap: 2rem;
-  padding: 3rem 6vw 2rem;
+  padding: 2.6rem 6vw 1.8rem;
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
 }
 
 .eyebrow {
@@ -44,12 +45,13 @@ body {
 
 .hero-panel {
   background: #ffffff;
-  border-radius: 20px;
-  padding: 1.4rem;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  padding: 1.2rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1rem;
 }
 
 .search {
@@ -106,23 +108,23 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
   gap: 2rem;
-  padding: 2.2rem 6vw 3.5rem;
+  padding: 2rem 6vw 3.2rem;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1rem;
 }
 
 .card {
   background: #ffffff;
-  border-radius: 16px;
-  padding: 1rem;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  padding: 1.05rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
 .card:hover {
@@ -132,7 +134,7 @@ body {
 
 .card.selected {
   border-color: #2563eb;
-  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.18);
+  box-shadow: none;
 }
 
 .card-title {
@@ -147,7 +149,7 @@ body {
   grid-template-columns: 1fr auto;
   row-gap: 0.2rem;
   font-size: 0.82rem;
-  color: #5f6b7a;
+  color: #6b7280;
   margin-bottom: 0.6rem;
 }
 
@@ -160,9 +162,9 @@ body {
 .card-tags span {
   font-size: 0.68rem;
   padding: 0.2rem 0.5rem;
-  background: #eef2ff;
+  background: #f3f4f6;
   border-radius: 999px;
-  color: #4338ca;
+  color: #374151;
 }
 
 .detail {
@@ -170,10 +172,10 @@ body {
   top: 2rem;
   align-self: start;
   background: #ffffff;
-  border-radius: 20px;
-  padding: 1.6rem;
+  border-radius: 16px;
+  padding: 1.5rem;
   min-height: 420px;
-  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
   border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
@@ -229,17 +231,17 @@ body {
 }
 
 .detail-actions .primary {
-  background: #2563eb;
+  background: #111827;
   color: #fff;
-  padding: 0.6rem 1rem;
+  padding: 0.55rem 0.95rem;
   border-radius: 999px;
   text-decoration: none;
   font-size: 0.9rem;
 }
 
 .pill {
-  border: 1px solid #cbd5f5;
-  color: #4338ca;
+  border: 1px solid #e5e7eb;
+  color: #374151;
   padding: 0.3rem 0.7rem;
   border-radius: 999px;
   font-size: 0.8rem;
@@ -277,11 +279,11 @@ body {
 }
 
 .tag-cloud span {
-  background: #eef2ff;
+  background: #f3f4f6;
   padding: 0.3rem 0.6rem;
   border-radius: 999px;
   font-size: 0.75rem;
-  color: #4338ca;
+  color: #374151;
 }
 
 .tag-cloud .muted {
@@ -301,8 +303,8 @@ body {
 .related button {
   width: 100%;
   text-align: left;
-  border: none;
-  background: #f1f5f9;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
   padding: 0.6rem 0.8rem;
   border-radius: 12px;
   margin-bottom: 0.5rem;
