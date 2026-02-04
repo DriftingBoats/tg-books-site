@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -83,7 +83,13 @@ def download_book(book_id: int) -> StreamingResponse:
 
 
 @app.delete("/api/books/{book_id}")
-def delete_book(book_id: int, also_tg: bool = False) -> Dict[str, Any]:
+def delete_book(
+    book_id: int,
+    also_tg: bool = False,
+    admin_key: str = Query("", alias="key"),
+) -> Dict[str, Any]:
+    if settings.admin_key and admin_key != settings.admin_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
     row = db.get_book(book_id)
     if not row:
         raise HTTPException(status_code=404, detail="Book not found")

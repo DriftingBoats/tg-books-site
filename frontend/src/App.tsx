@@ -54,6 +54,11 @@ export default function App() {
     return params.get("admin") === "1";
   }, []);
 
+  const adminKey = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("key") || "";
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -100,7 +105,9 @@ export default function App() {
     if (!selected) return;
     if (!confirm("Remove this item from TG and the database?")) return;
     setRemoving(true);
-    await fetch(`/api/books/${selected.id}?also_tg=true`, { method: "DELETE" });
+    await fetch(`/api/books/${selected.id}?also_tg=true&key=${encodeURIComponent(adminKey)}`, {
+      method: "DELETE",
+    });
     setSelected(null);
     setRemoving(false);
     const params = new URLSearchParams();

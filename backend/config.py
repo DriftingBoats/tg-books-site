@@ -10,6 +10,7 @@ class Settings:
     bot_token: str
     book_chat_id: str
     maint_chat_id: str
+    admin_key: str
     db_path: Path
     poll_interval: float
     cleanup_interval: float
@@ -36,6 +37,7 @@ def load_settings() -> Settings:
     bot_token = os.getenv("TG_BOT_TOKEN", "").strip()
     book_chat_id = os.getenv("TG_BOOK_CHAT_ID", "").strip()
     maint_chat_id = os.getenv("TG_MAINT_CHAT_ID", "").strip()
+    admin_key = os.getenv("THAIGL_ADMIN_KEY", "").strip()
     db_path = Path(os.getenv("THAIGL_DB_PATH", "./data/thaigl.db")).resolve()
     poll_interval = float(os.getenv("TG_POLL_INTERVAL", "2.0"))
     cleanup_interval = float(os.getenv("TG_CLEANUP_INTERVAL", "0"))
@@ -45,6 +47,7 @@ def load_settings() -> Settings:
         bot_token=bot_token,
         book_chat_id=book_chat_id,
         maint_chat_id=maint_chat_id,
+        admin_key=admin_key,
         db_path=db_path,
         poll_interval=poll_interval,
         cleanup_interval=cleanup_interval,

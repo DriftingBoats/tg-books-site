@@ -18,6 +18,7 @@ TG_MAINT_CHAT_ID=...  # maintenance group id for cleanup (optional)
 THAIGL_DB_PATH=./data/thaigl.db
 FRONTEND_DIST=./frontend/dist
 TG_CLEANUP_INTERVAL=0  # seconds; set to >0 to enable auto cleanup
+THAIGL_ADMIN_KEY=...   # required for delete endpoint if set
 ```
 
 ## Backend
@@ -52,6 +53,10 @@ attempting to copy each message to a maintenance group. If the copy fails with
 \"message to copy not found\", the record is removed from the database.
 
 Set `TG_MAINT_CHAT_ID` and `TG_CLEANUP_INTERVAL` (seconds) to enable this.
+
+## Admin delete
+Enable admin mode with `?admin=1&key=YOUR_KEY`. The backend checks `THAIGL_ADMIN_KEY`
+for delete requests.
 
 ## Notes
 - Bot must be admin and privacy mode disabled in the book group.
