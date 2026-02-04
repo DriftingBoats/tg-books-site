@@ -153,6 +153,19 @@ class Database:
             row = conn.execute("SELECT * FROM books WHERE id=?", (book_id,)).fetchone()
             return row
 
+    def delete_book(self, book_id: int) -> bool:
+        with self.connect() as conn:
+            cur = conn.execute("DELETE FROM books WHERE id=?", (book_id,))
+            return cur.rowcount > 0
+
+    def delete_book_by_message(self, chat_id: str, message_id: int) -> bool:
+        with self.connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM books WHERE tg_chat_id=? AND tg_message_id=?",
+                (chat_id, message_id),
+            )
+            return cur.rowcount > 0
+
     def recent_books(self, limit: int) -> List[sqlite3.Row]:
         with self.connect() as conn:
             return conn.execute("SELECT * FROM books ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()

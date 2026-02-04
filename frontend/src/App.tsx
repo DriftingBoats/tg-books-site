@@ -47,6 +47,7 @@ export default function App() {
   const [books, setBooks] = useState<Book[]>([]);
   const [selected, setSelected] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +90,21 @@ export default function App() {
       .slice(0, 6)
       .map((item) => item.book);
   }, [books, selected]);
+
+  const removeSelected = async () => {
+    if (!selected) return;
+    setRemoving(true);
+    await fetch(`/api/books/${selected.id}?also_tg=false`, { method: "DELETE" });
+    setSelected(null);
+    setRemoving(false);
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("query", query.trim());
+    if (lang) params.set("lang", lang);
+    params.set("limit", "200");
+    const res = await fetch(`/api/books?${params.toString()}`);
+    const data: BooksResponse = await res.json();
+    setBooks(data.items);
+  };
 
   return (
     <div className="app">
@@ -158,13 +174,16 @@ export default function App() {
                 <p className="detail-label">Book dossier</p>
                 <h2>{selected.title || selected.file_name || "Untitled"}</h2>
                 <p className="detail-author">{selected.author || "Unknown author"}</p>
-                <div className="detail-actions">
-                  <a className="primary" href={`/api/books/${selected.id}/download`}>
-                    Download
-                  </a>
-                  <span className="pill">{selected.lang?.toUpperCase() || "-"}</span>
-                </div>
+              <div className="detail-actions">
+                <a className="primary" href={`/api/books/${selected.id}/download`}>
+                  Download
+                </a>
+                <span className="pill">{selected.lang?.toUpperCase() || "-"}</span>
               </div>
+              <button className="ghost" onClick={removeSelected} disabled={removing}>
+                {removing ? "Removing..." : "Remove from list"}
+              </button>
+            </div>
 
               <div className="detail-grid">
                 <div>

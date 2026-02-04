@@ -77,6 +77,20 @@ def download_book(book_id: int) -> StreamingResponse:
     return StreamingResponse(client.stream_file(file_path), headers=headers)
 
 
+@app.delete("/api/books/{book_id}")
+def delete_book(book_id: int, also_tg: bool = False) -> Dict[str, Any]:
+    row = db.get_book(book_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Book not found")
+    if also_tg and settings.bot_token:
+        client = TelegramClient(settings.bot_token)
+        try:
+            client.delete_message(row["tg_chat_id"], int(row["tg_message_id"]))
+        except Exception as exc:
+            logger.warning("delete_message_failed: %s", exc)
+    removed = db.delete_book(book_id)
+    return {"removed": removed}
+
 @app.post("/api/sync")
 def sync_now() -> Dict[str, str]:
     if not settings.bot_token or not settings.book_chat_id:
@@ -120,6 +134,25 @@ def _poll_updates_once() -> None:
                 continue
             chat_id = str(message.get("chat", {}).get("id", ""))
             if chat_id != settings.book_chat_id:
+                _advance_offset(update_id)
+                continue
+            text = message.get("text") or ""
+            if text.startswith("/remove"):
+                removed_message_id = None
+                parts = text.split()
+                if len(parts) >= 2 and parts[1].isdigit():
+                    removed_message_id = int(parts[1])
+                reply = message.get("reply_to_message")
+                if reply and reply.get("message_id"):
+                    removed_message_id = int(reply["message_id"])
+                if removed_message_id:
+                    deleted = db.delete_book_by_message(chat_id, removed_message_id)
+                    try:
+                        client.delete_message(chat_id, removed_message_id)
+                    except Exception:
+                        pass
+                    if deleted:
+                        client.send_message(chat_id, f"Removed book {removed_message_id}.")
                 _advance_offset(update_id)
                 continue
             document = message.get("document")

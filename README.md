@@ -44,6 +44,19 @@ Tags: tag1, tag2
 Source: tg
 ```
 
+## Remove items
+Telegram does not notify bots about deletions. Use one of these:
+
+1. In the group, reply to a book message with:
+```
+/remove
+```
+or
+```
+/remove <message_id>
+```
+2. In the UI, click "Remove from list" (DB only).
+
 ## Notes
 - Bot must be admin and privacy mode disabled in the book group.
 - Phase 2 will add PDF margin tools and translation flow.
