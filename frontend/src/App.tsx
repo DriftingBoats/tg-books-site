@@ -41,6 +41,13 @@ function splitTags(tags?: string | null) {
   return tags.split(",").map((tag) => tag.trim()).filter(Boolean);
 }
 
+function formatDate(raw?: string | null) {
+  if (!raw) return "-";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toISOString().slice(0, 10);
+}
+
 export default function App() {
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState("");
@@ -166,16 +173,22 @@ export default function App() {
               onClick={() => setSelected(book)}
             >
               <div className="card-title">{book.title || book.file_name || "Untitled"}</div>
-              <div className="card-meta">
+              <div className="card-subtitle">
                 <span>{book.author || "Unknown"}</span>
-                <span>{book.lang?.toUpperCase() || "-"}</span>
-                <span>{book.file_name || "Untitled file"}</span>
-                <span>{formatSize(book.file_size)}</span>
+                <span className="divider">·</span>
+                <span>{book.source || "tg"}</span>
               </div>
+              <div className="card-meta">
+                <span>{book.lang?.toUpperCase() || "-"}</span>
+                <span>{formatSize(book.file_size)}</span>
+                <span>{formatDate(book.updated_at)}</span>
+              </div>
+              <div className="card-file">{book.file_name || "Untitled file"}</div>
               <div className="card-tags">
                 {splitTags(book.tags).slice(0, 3).map((tag) => (
                   <span key={tag}>{tag}</span>
                 ))}
+                {splitTags(book.tags).length > 3 && <span>+{splitTags(book.tags).length - 3}</span>}
               </div>
             </article>
           ))}

@@ -113,7 +113,7 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
 }
 
@@ -139,18 +139,37 @@ body {
 
 .card-title {
   font-weight: 600;
-  font-size: 0.98rem;
-  margin-bottom: 0.4rem;
+  font-size: 1rem;
+  margin-bottom: 0.2rem;
   color: #0f172a;
 }
 
-.card-meta {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  row-gap: 0.2rem;
+.card-subtitle {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
   font-size: 0.82rem;
   color: #6b7280;
+  margin-bottom: 0.45rem;
+}
+
+.card-subtitle .divider {
+  color: #cbd5f5;
+}
+
+.card-meta {
+  display: flex;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.card-file {
+  font-size: 0.78rem;
+  color: #475569;
   margin-bottom: 0.6rem;
+  word-break: break-all;
 }
 
 .card-tags {
