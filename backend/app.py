@@ -305,11 +305,13 @@ def _poll_updates_once() -> None:
             cover_file_id = thumb.get("file_id") if isinstance(thumb, dict) else None
 
             raw_lang = fields.get("lang")
-            lang = normalize_lang(raw_lang) if raw_lang is not None else None
+            lang = normalize_lang(raw_lang) if raw_lang is not None else ""
             raw_tags = fields.get("tags")
-            tags = normalize_tags(raw_tags) if raw_tags is not None else None
+            tags = normalize_tags(raw_tags) if raw_tags is not None else ""
             raw_category = fields.get("category")
             category = raw_category.strip() if isinstance(raw_category, str) and raw_category.strip() else None
+            default_title = document.get("file_name") or "Untitled"
+            default_author = "Unknown"
             data = {
                 "tg_chat_id": chat_id,
                 "tg_message_id": int(message.get("message_id")),
@@ -318,8 +320,8 @@ def _poll_updates_once() -> None:
                 "file_name": document.get("file_name"),
                 "mime_type": document.get("mime_type"),
                 "file_size": document.get("file_size"),
-                "title": fields.get("title"),
-                "author": fields.get("author"),
+                "title": fields.get("title") or default_title,
+                "author": fields.get("author") or default_author,
                 "lang": lang,
                 "tags": tags,
                 "category": category,
