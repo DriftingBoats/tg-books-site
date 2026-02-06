@@ -19,6 +19,7 @@ class Settings:
     app_icon: str
     apple_icon: str
     logo: str
+    default_cover: str
     poll_interval: float
     cleanup_interval: float
     frontend_dist: Optional[Path]
@@ -52,6 +53,7 @@ def load_settings() -> Settings:
     app_icon = os.getenv("THAIGL_APP_ICON", "/icons/favicon.png").strip()
     apple_icon = os.getenv("THAIGL_APPLE_ICON", "").strip()
     logo = os.getenv("THAIGL_LOGO", "").strip()
+    default_cover = os.getenv("THAIGL_DEFAULT_COVER", "").strip()
     poll_interval = float(os.getenv("TG_POLL_INTERVAL", "2.0"))
     cleanup_interval = float(os.getenv("TG_CLEANUP_INTERVAL", "0"))
     frontend_dist_raw = os.getenv("FRONTEND_DIST", "").strip()
@@ -68,6 +70,7 @@ def load_settings() -> Settings:
         app_icon=app_icon,
         apple_icon=apple_icon,
         logo=logo,
+        default_cover=default_cover,
         poll_interval=poll_interval,
         cleanup_interval=cleanup_interval,
         frontend_dist=frontend_dist,

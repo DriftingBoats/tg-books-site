@@ -80,6 +80,7 @@ type AppConfig = {
   app_icon: string;
   apple_icon: string;
   logo: string;
+  default_cover: string;
 };
 
 const defaultConfig: AppConfig = {
@@ -88,6 +89,7 @@ const defaultConfig: AppConfig = {
   app_icon: "/favicon.ico",
   apple_icon: "/favicon.ico",
   logo: "",
+  default_cover: "",
 };
 
 export default function App() {
@@ -163,7 +165,7 @@ export default function App() {
   const coverSrc = (book: Book) => {
     if (book.cover) return book.cover;
     if (book.cover_file_id) return `/api/books/${book.id}/cover`;
-    return "";
+    return config.default_cover || "";
   };
 
   useEffect(() => {

@@ -25,6 +25,7 @@ THAIGL_HEADER_NAME=GL Library
 THAIGL_APP_ICON=/icons/favicon.png
 THAIGL_APPLE_ICON=/icons/apple-touch-icon.png
 THAIGL_LOGO=/icons/logo.png
+THAIGL_DEFAULT_COVER=/icons/default-cover.png
 ```
 
 ## Backend
