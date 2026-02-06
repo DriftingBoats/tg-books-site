@@ -44,8 +44,13 @@ Title: ...
 Author: ...
 Lang: zh/en
 Tags: tag1, tag2
+Category: ...
 Source: tg
 ```
+
+Notes:
+- `Source:` is optional. If omitted, the backend will use the sender's Telegram username (if available).
+- `Tags:` / `Category:` are optional.
 
 ## Auto cleanup
 Telegram does not notify bots about deletions. Auto cleanup is implemented by
@@ -57,6 +62,8 @@ Set `TG_MAINT_CHAT_ID` and `TG_CLEANUP_INTERVAL` (seconds) to enable this.
 ## Admin delete
 Enable admin mode with `?admin=1&key=YOUR_KEY`. The backend checks `THAIGL_ADMIN_KEY`
 for delete requests.
+
+Admin mode also supports editing book metadata (title/author/lang/tags/source/category/cover URL).
 
 ## Notes
 - Bot must be admin and privacy mode disabled in the book group.

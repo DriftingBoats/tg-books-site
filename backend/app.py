@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from .config import load_settings
 from .db import Database
@@ -47,11 +48,18 @@ def health() -> Dict[str, str]:
 
 
 @app.get("/api/books")
-def list_books(query: Optional[str] = None, lang: Optional[str] = None, limit: int = 60, offset: int = 0) -> Dict[str, Any]:
+def list_books(
+    query: Optional[str] = None,
+    lang: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: int = 60,
+    offset: int = 0,
+) -> Dict[str, Any]:
     query = query.strip() if query else None
     lang = lang.strip() if lang else None
-    rows = db.list_books(query, lang, limit, offset)
-    total = db.count_books(query, lang)
+    category = category.strip() if category else None
+    rows = db.list_books(query, lang, category, limit, offset)
+    total = db.count_books(query, lang, category)
     return {
         "total": total,
         "items": [dict(row) for row in rows],
@@ -80,6 +88,100 @@ def download_book(book_id: int) -> StreamingResponse:
     filename = row["file_name"] or file_path.split("/")[-1]
     headers = {"Content-Disposition": f"attachment; filename=\"{filename}\""}
     return StreamingResponse(client.stream_file(file_path), headers=headers)
+
+
+def _guess_media_type(file_path: str) -> str:
+    lowered = file_path.lower()
+    if lowered.endswith(".jpg") or lowered.endswith(".jpeg"):
+        return "image/jpeg"
+    if lowered.endswith(".png"):
+        return "image/png"
+    if lowered.endswith(".webp"):
+        return "image/webp"
+    return "application/octet-stream"
+
+
+@app.get("/api/books/{book_id}/cover")
+def cover_image(book_id: int) -> StreamingResponse:
+    row = db.get_book(book_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Book not found")
+    cover_file_id = row["cover_file_id"]
+    if not cover_file_id:
+        raise HTTPException(status_code=404, detail="Cover not found")
+    if not settings.bot_token:
+        raise HTTPException(status_code=500, detail="Bot token missing")
+    client = TelegramClient(settings.bot_token)
+    info = client.get_file(cover_file_id)
+    file_path = info["result"]["file_path"]
+    headers = {"Cache-Control": "public, max-age=86400"}
+    return StreamingResponse(client.stream_file(file_path), headers=headers, media_type=_guess_media_type(file_path))
+
+
+class BookPatch(BaseModel):
+    title: str | None = None
+    author: str | None = None
+    lang: str | None = None
+    tags: str | None = None
+    source: str | None = None
+    category: str | None = None
+    cover: str | None = None  # external URL override
+
+
+@app.patch("/api/books/{book_id}")
+def patch_book(book_id: int, payload: BookPatch, admin_key: str = Query("", alias="key")) -> Dict[str, Any]:
+    if settings.admin_key and admin_key != settings.admin_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    row = db.get_book(book_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    if "lang" in data:
+        raw = data.get("lang")
+        if raw is None:
+            data["lang"] = None
+        else:
+            raw = raw.strip()
+            data["lang"] = normalize_lang(raw) if raw else ""
+
+    if "tags" in data:
+        raw = data.get("tags")
+        if raw is None:
+            data["tags"] = None
+        else:
+            raw = raw.strip()
+            data["tags"] = normalize_tags(raw) if raw else ""
+
+    if "category" in data:
+        raw = data.get("category")
+        if raw is None:
+            data["category"] = None
+        else:
+            raw = raw.strip()
+            data["category"] = raw if raw else None
+
+    if "cover" in data:
+        raw = data.get("cover")
+        if raw is None:
+            data["cover"] = None
+        else:
+            raw = raw.strip()
+            data["cover"] = raw if raw else None
+
+    # Trim simple string fields.
+    for key in ("title", "author", "source"):
+        if key in data and isinstance(data[key], str):
+            data[key] = data[key].strip()
+
+    updated = db.update_book(book_id, data)
+    if not updated:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    row2 = db.get_book(book_id)
+    return dict(row2) if row2 else dict(row)
 
 
 @app.delete("/api/books/{book_id}")
@@ -172,6 +274,18 @@ def _poll_updates_once() -> None:
                 continue
             caption = message.get("caption")
             fields = parse_caption(caption)
+            sender = message.get("from") or {}
+            sender_username = sender.get("username")
+            source_default = sender_username or ""
+            thumb = document.get("thumbnail") or document.get("thumb") or None
+            cover_file_id = thumb.get("file_id") if isinstance(thumb, dict) else None
+
+            raw_lang = fields.get("lang")
+            lang = normalize_lang(raw_lang) if raw_lang is not None else None
+            raw_tags = fields.get("tags")
+            tags = normalize_tags(raw_tags) if raw_tags is not None else None
+            raw_category = fields.get("category")
+            category = raw_category.strip() if isinstance(raw_category, str) and raw_category.strip() else None
             data = {
                 "tg_chat_id": chat_id,
                 "tg_message_id": int(message.get("message_id")),
@@ -182,9 +296,12 @@ def _poll_updates_once() -> None:
                 "file_size": document.get("file_size"),
                 "title": fields.get("title"),
                 "author": fields.get("author"),
-                "lang": normalize_lang(fields.get("lang")),
-                "tags": normalize_tags(fields.get("tags")),
-                "source": fields.get("source") or "tg",
+                "lang": lang,
+                "tags": tags,
+                "category": category,
+                "cover_file_id": cover_file_id,
+                # If caption doesn't provide Source:, use sender username (if available).
+                "source": fields.get("source") or source_default,
             }
             db.upsert_book(data)
             _advance_offset(update_id)

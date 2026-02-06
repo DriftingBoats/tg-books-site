@@ -70,7 +70,7 @@ body {
 }
 
 .search select {
-  max-width: 8rem;
+  max-width: 10rem;
 }
 
 .admin-pill {
@@ -132,6 +132,27 @@ body {
   border-color: rgba(15, 23, 42, 0.18);
 }
 
+.card-cover {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.06), rgba(15, 23, 42, 0.02));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  margin-bottom: 0.8rem;
+}
+
+.card-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.card-cover-placeholder {
+  width: 100%;
+  height: 100%;
+}
 
 .card-title {
   font-weight: 600;
@@ -159,6 +180,19 @@ body {
   font-size: 0.78rem;
   color: #6b7280;
   margin-bottom: 0.5rem;
+}
+
+.card-category {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid rgba(55, 48, 163, 0.12);
+  margin-bottom: 0.55rem;
 }
 
 .card-file {
@@ -201,6 +235,17 @@ body {
   font-weight: 600;
 }
 
+.card-actions .edit {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .card-actions .remove {
   border: 1px solid rgba(239, 68, 68, 0.5);
   background: #fee2e2;
@@ -228,6 +273,84 @@ body {
   color: #64748b;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  z-index: 50;
+}
+
+.modal {
+  width: min(720px, 100%);
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22);
+  padding: 1.1rem;
+}
+
+.modal-title {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.75rem;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.modal-grid label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+.modal-grid input {
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  font-size: 0.9rem;
+}
+
+.modal-span {
+  grid-column: 1 / -1;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.btn-secondary,
+.btn-primary {
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.btn-primary {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.btn-secondary:disabled,
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 960px) {
   .hero {
     grid-template-columns: 1fr;
@@ -243,5 +366,9 @@ body {
 
   .search select {
     max-width: none;
+  }
+
+  .modal-grid {
+    grid-template-columns: 1fr;
   }
 }

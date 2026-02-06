@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS books (
     author TEXT,
     lang TEXT,
     tags TEXT,
+    category TEXT,
+    cover TEXT,
+    cover_file_id TEXT,
     source TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
@@ -65,6 +68,17 @@ class Database:
     def init(self) -> None:
         with self.connect() as conn:
             conn.executescript(SCHEMA_SQL)
+            self._migrate_books_table(conn)
+
+    def _migrate_books_table(self, conn: sqlite3.Connection) -> None:
+        # Lightweight schema migration for existing DBs.
+        cols = {row["name"] for row in conn.execute("PRAGMA table_info(books)").fetchall()}
+        if "category" not in cols:
+            conn.execute("ALTER TABLE books ADD COLUMN category TEXT")
+        if "cover" not in cols:
+            conn.execute("ALTER TABLE books ADD COLUMN cover TEXT")
+        if "cover_file_id" not in cols:
+            conn.execute("ALTER TABLE books ADD COLUMN cover_file_id TEXT")
 
     def get_meta(self, key: str) -> Optional[str]:
         with self.connect() as conn:
@@ -92,6 +106,8 @@ class Database:
             "author",
             "lang",
             "tags",
+            "category",
+            "cover_file_id",
             "source",
         ]
         values = [data.get(col) for col in columns]
@@ -100,25 +116,34 @@ class Database:
                 """
                 INSERT INTO books (
                     tg_chat_id, tg_message_id, file_id, file_unique_id, file_name, mime_type, file_size,
-                    title, author, lang, tags, source
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    title, author, lang, tags, category, cover_file_id, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(tg_chat_id, tg_message_id) DO UPDATE SET
                     file_id=excluded.file_id,
                     file_unique_id=excluded.file_unique_id,
                     file_name=excluded.file_name,
                     mime_type=excluded.mime_type,
                     file_size=excluded.file_size,
-                    title=excluded.title,
-                    author=excluded.author,
-                    lang=excluded.lang,
-                    tags=excluded.tags,
+                    title=COALESCE(excluded.title, title),
+                    author=COALESCE(excluded.author, author),
+                    lang=COALESCE(excluded.lang, lang),
+                    tags=COALESCE(excluded.tags, tags),
+                    category=COALESCE(excluded.category, category),
+                    cover_file_id=COALESCE(excluded.cover_file_id, cover_file_id),
                     source=excluded.source,
                     updated_at=datetime('now')
                 """,
                 values,
             )
 
-    def list_books(self, query: Optional[str], lang: Optional[str], limit: int, offset: int) -> List[sqlite3.Row]:
+    def list_books(
+        self,
+        query: Optional[str],
+        lang: Optional[str],
+        category: Optional[str],
+        limit: int,
+        offset: int,
+    ) -> List[sqlite3.Row]:
         with self.connect() as conn:
             clauses = []
             params: List[Any] = []
@@ -128,12 +153,15 @@ class Database:
             if lang:
                 clauses.append("lang = ?")
                 params.append(lang)
+            if category:
+                clauses.append("category = ?")
+                params.append(category)
             where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
             sql = f"SELECT * FROM books {where} ORDER BY updated_at DESC LIMIT ? OFFSET ?"
             params.extend([limit, offset])
             return conn.execute(sql, params).fetchall()
 
-    def count_books(self, query: Optional[str], lang: Optional[str]) -> int:
+    def count_books(self, query: Optional[str], lang: Optional[str], category: Optional[str]) -> int:
         with self.connect() as conn:
             clauses = []
             params: List[Any] = []
@@ -143,6 +171,9 @@ class Database:
             if lang:
                 clauses.append("lang = ?")
                 params.append(lang)
+            if category:
+                clauses.append("category = ?")
+                params.append(category)
             where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
             sql = f"SELECT COUNT(1) AS total FROM books {where}"
             row = conn.execute(sql, params).fetchone()
@@ -164,6 +195,17 @@ class Database:
                 "DELETE FROM books WHERE tg_chat_id=? AND tg_message_id=?",
                 (chat_id, message_id),
             )
+            return cur.rowcount > 0
+
+    def update_book(self, book_id: int, fields: Dict[str, Any]) -> bool:
+        allowed = {"title", "author", "lang", "tags", "source", "category", "cover"}
+        keys = [key for key in fields.keys() if key in allowed]
+        if not keys:
+            return False
+        assignments = ", ".join([f"{key}=?" for key in keys] + ["updated_at=datetime('now')"])
+        values = [fields[key] for key in keys] + [book_id]
+        with self.connect() as conn:
+            cur = conn.execute(f"UPDATE books SET {assignments} WHERE id=?", values)
             return cur.rowcount > 0
 
     def recent_books(self, limit: int) -> List[sqlite3.Row]:
