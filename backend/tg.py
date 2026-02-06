@@ -60,7 +60,7 @@ class TelegramClient:
         return data
 
 
-def parse_caption(caption: str | None) -> Dict[str, str]:
+def parse_caption(caption: Optional[str]) -> Dict[str, str]:
     if not caption:
         return {}
     result: Dict[str, str] = {}

@@ -14,6 +14,11 @@ class Settings:
     admin_key: str
     db_path: Path
     cover_cache_dir: Path
+    site_name: str
+    header_name: str
+    app_icon: str
+    apple_icon: str
+    logo: str
     poll_interval: float
     cleanup_interval: float
     frontend_dist: Optional[Path]
@@ -42,6 +47,11 @@ def load_settings() -> Settings:
     admin_key = os.getenv("THAIGL_ADMIN_KEY", "").strip()
     db_path = Path(os.getenv("THAIGL_DB_PATH", "./data/thaigl.db")).resolve()
     cover_cache_dir = Path(os.getenv("THAIGL_COVER_DIR", "./data/covers")).resolve()
+    site_name = os.getenv("THAIGL_SITE_NAME", "GL Library").strip()
+    header_name = os.getenv("THAIGL_HEADER_NAME", site_name).strip() or site_name
+    app_icon = os.getenv("THAIGL_APP_ICON", "/icons/favicon.png").strip()
+    apple_icon = os.getenv("THAIGL_APPLE_ICON", "").strip()
+    logo = os.getenv("THAIGL_LOGO", "").strip()
     poll_interval = float(os.getenv("TG_POLL_INTERVAL", "2.0"))
     cleanup_interval = float(os.getenv("TG_CLEANUP_INTERVAL", "0"))
     frontend_dist_raw = os.getenv("FRONTEND_DIST", "").strip()
@@ -53,6 +63,11 @@ def load_settings() -> Settings:
         admin_key=admin_key,
         db_path=db_path,
         cover_cache_dir=cover_cache_dir,
+        site_name=site_name,
+        header_name=header_name,
+        app_icon=app_icon,
+        apple_icon=apple_icon,
+        logo=logo,
         poll_interval=poll_interval,
         cleanup_interval=cleanup_interval,
         frontend_dist=frontend_dist,

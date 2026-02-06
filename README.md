@@ -20,6 +20,11 @@ THAIGL_COVER_DIR=./data/covers
 FRONTEND_DIST=./frontend/dist
 TG_CLEANUP_INTERVAL=0  # seconds; set to >0 to enable auto cleanup
 THAIGL_ADMIN_KEY=...   # required for delete endpoint if set
+THAIGL_SITE_NAME=GL Library
+THAIGL_HEADER_NAME=GL Library
+THAIGL_APP_ICON=/icons/favicon.png
+THAIGL_APPLE_ICON=/icons/apple-touch-icon.png
+THAIGL_LOGO=/icons/logo.png
 ```
 
 ## Backend
@@ -63,6 +68,10 @@ Set `TG_MAINT_CHAT_ID` and `TG_CLEANUP_INTERVAL` (seconds) to enable this.
 ## Admin delete
 Enable admin mode with `?admin=1&key=YOUR_KEY`. The backend checks `THAIGL_ADMIN_KEY`
 for delete requests.
+
+## Icons
+Place icon assets under `frontend/public/icons/`. Update the `THAIGL_*` icon env vars
+to point to those paths (for example `/icons/logo.png`).
 
 Admin mode also supports editing book metadata (title/author/lang/tags/source/category/cover URL).
 

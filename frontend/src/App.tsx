@@ -74,10 +74,24 @@ function formatDate(raw?: string | null) {
   return `${year}/${month}/${day}`;
 }
 
+type AppConfig = {
+  site_name: string;
+  header_name: string;
+  app_icon: string;
+  apple_icon: string;
+  logo: string;
+};
+
+const defaultConfig: AppConfig = {
+  site_name: "GL Library",
+  header_name: "GL Library",
+  app_icon: "/favicon.ico",
+  apple_icon: "/favicon.ico",
+  logo: "",
+};
+
 export default function App() {
-  const siteName = import.meta.env.VITE_SITE_NAME || "GL Library";
-  const headerName = import.meta.env.VITE_HEADER_NAME || siteName;
-  const logoSrc = import.meta.env.VITE_APP_LOGO || "";
+  const [config, setConfig] = useState<AppConfig>(defaultConfig);
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState("");
@@ -112,10 +126,39 @@ export default function App() {
   }, [adminKey]);
 
   useEffect(() => {
+    const applyIcons = (rel: string, href: string) => {
+      if (!href) return;
+      let link = document.querySelector<HTMLLinkElement>(`link[rel='${rel}']`);
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = rel;
+        document.head.appendChild(link);
+      }
+      link.href = href;
+    };
+
+    const loadConfig = async () => {
+      try {
+        const res = await fetch("/api/config");
+        if (!res.ok) return;
+        const data = (await res.json()) as AppConfig;
+        const next = { ...defaultConfig, ...data };
+        setConfig(next);
+        applyIcons("icon", next.app_icon);
+        applyIcons("apple-touch-icon", next.apple_icon || next.logo);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadConfig();
+  }, []);
+
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("theme", theme);
-    document.title = siteName;
-  }, [theme]);
+    document.title = config.site_name;
+  }, [theme, config.site_name]);
 
   const coverSrc = (book: Book) => {
     if (book.cover) return book.cover;
@@ -261,12 +304,12 @@ export default function App() {
       <header className="topbar">
         <div className="shell topbar-inner">
           <div className="brand">
-            {logoSrc ? (
-              <img className="brand-mark" src={logoSrc} alt="logo" />
+            {config.logo ? (
+              <img className="brand-mark" src={config.logo} alt="logo" />
             ) : (
               <div className="brand-mark" aria-hidden="true" />
             )}
-            <div className="brand-title">{headerName}</div>
+            <div className="brand-title">{config.header_name}</div>
           </div>
 
           <div className="searchbar" role="search">

@@ -48,6 +48,19 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/config")
+def get_config() -> Dict[str, str]:
+    apple_icon = settings.apple_icon or settings.logo or settings.app_icon
+    logo = settings.logo or settings.app_icon
+    return {
+        "site_name": settings.site_name,
+        "header_name": settings.header_name,
+        "app_icon": settings.app_icon,
+        "apple_icon": apple_icon,
+        "logo": logo,
+    }
+
+
 @app.get("/api/books")
 def list_books(
     query: Optional[str] = None,
