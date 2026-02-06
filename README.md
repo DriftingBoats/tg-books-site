@@ -16,6 +16,7 @@ TG_BOT_TOKEN=...
 TG_BOOK_CHAT_ID=...   # group id like -1001234567890
 TG_MAINT_CHAT_ID=...  # maintenance group id for cleanup (optional)
 THAIGL_DB_PATH=./data/thaigl.db
+THAIGL_COVER_DIR=./data/covers
 FRONTEND_DIST=./frontend/dist
 TG_CLEANUP_INTERVAL=0  # seconds; set to >0 to enable auto cleanup
 THAIGL_ADMIN_KEY=...   # required for delete endpoint if set

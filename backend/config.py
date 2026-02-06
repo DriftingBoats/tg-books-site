@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -12,9 +13,10 @@ class Settings:
     maint_chat_id: str
     admin_key: str
     db_path: Path
+    cover_cache_dir: Path
     poll_interval: float
     cleanup_interval: float
-    frontend_dist: Path | None
+    frontend_dist: Optional[Path]
 
 
 def _load_dotenv() -> None:
@@ -39,6 +41,7 @@ def load_settings() -> Settings:
     maint_chat_id = os.getenv("TG_MAINT_CHAT_ID", "").strip()
     admin_key = os.getenv("THAIGL_ADMIN_KEY", "").strip()
     db_path = Path(os.getenv("THAIGL_DB_PATH", "./data/thaigl.db")).resolve()
+    cover_cache_dir = Path(os.getenv("THAIGL_COVER_DIR", "./data/covers")).resolve()
     poll_interval = float(os.getenv("TG_POLL_INTERVAL", "2.0"))
     cleanup_interval = float(os.getenv("TG_CLEANUP_INTERVAL", "0"))
     frontend_dist_raw = os.getenv("FRONTEND_DIST", "").strip()
@@ -49,6 +52,7 @@ def load_settings() -> Settings:
         maint_chat_id=maint_chat_id,
         admin_key=admin_key,
         db_path=db_path,
+        cover_cache_dir=cover_cache_dir,
         poll_interval=poll_interval,
         cleanup_interval=cleanup_interval,
         frontend_dist=frontend_dist,

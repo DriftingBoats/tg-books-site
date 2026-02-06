@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -111,21 +112,44 @@ def cover_image(book_id: int) -> StreamingResponse:
         raise HTTPException(status_code=404, detail="Cover not found")
     if not settings.bot_token:
         raise HTTPException(status_code=500, detail="Bot token missing")
+    cache_dir = settings.cover_cache_dir
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cached_candidates = [
+        path for path in cache_dir.glob(f"{cover_file_id}.*") if path.is_file() and not path.name.endswith(".tmp")
+    ]
+    for cached in cached_candidates:
+        if cached.stat().st_size > 0:
+            return FileResponse(
+                cached,
+                media_type=_guess_media_type(cached.name),
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
     client = TelegramClient(settings.bot_token)
     info = client.get_file(cover_file_id)
     file_path = info["result"]["file_path"]
-    headers = {"Cache-Control": "public, max-age=86400"}
-    return StreamingResponse(client.stream_file(file_path), headers=headers, media_type=_guess_media_type(file_path))
+    suffix = Path(file_path).suffix or ".bin"
+    cached_file = cache_dir / f"{cover_file_id}{suffix}"
+    media_type = _guess_media_type(file_path)
+    tmp_path = cache_dir / f"{cover_file_id}{suffix}.tmp"
+    with open(tmp_path, "wb") as f:
+        for chunk in client.stream_file(file_path):
+            f.write(chunk)
+    os.replace(tmp_path, cached_file)
+    return FileResponse(
+        cached_file,
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 class BookPatch(BaseModel):
-    title: str | None = None
-    author: str | None = None
-    lang: str | None = None
-    tags: str | None = None
-    source: str | None = None
-    category: str | None = None
-    cover: str | None = None  # external URL override
+    title: Optional[str] = None
+    author: Optional[str] = None
+    lang: Optional[str] = None
+    tags: Optional[str] = None
+    source: Optional[str] = None
+    category: Optional[str] = None
+    cover: Optional[str] = None  # external URL override
 
 
 @app.patch("/api/books/{book_id}")
