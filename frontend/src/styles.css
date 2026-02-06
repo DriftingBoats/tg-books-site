@@ -541,7 +541,8 @@ html[data-theme="dark"] .modal {
   color: var(--muted);
 }
 
-.modal-grid input {
+.modal-grid input,
+.modal-grid select {
   height: 42px;
   padding: 0 12px;
   border: 1px solid var(--border);
@@ -552,11 +553,13 @@ html[data-theme="dark"] .modal {
   border-radius: 12px;
 }
 
-html[data-theme="dark"] .modal-grid input {
+html[data-theme="dark"] .modal-grid input,
+html[data-theme="dark"] .modal-grid select {
   background: rgba(14, 20, 38, 0.55);
 }
 
-.modal-grid input:focus {
+.modal-grid input:focus,
+.modal-grid select:focus {
   border-color: rgba(167, 139, 250, 0.7);
   box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.18);
 }

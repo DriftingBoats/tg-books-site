@@ -27,6 +27,13 @@ const langTabs = [
   { value: "zh", label: "中文" },
 ] as const;
 
+const baseLangOptions = [
+  { value: "", label: "Unset" },
+  { value: "zh", label: "中文" },
+  { value: "en", label: "English" },
+  { value: "th", label: "ไทย" },
+];
+
 type Theme = "light" | "dark";
 
 function getInitialTheme(): Theme {
@@ -45,7 +52,8 @@ function formatSize(size?: number | null) {
     value /= 1024;
     idx += 1;
   }
-  return `${value.toFixed(1)} ${units[idx]}`;
+  const text = value.toFixed(1).replace(/\.0$/, "");
+  return `${text}${units[idx]}`;
 }
 
 function splitTags(tags?: string | null) {
@@ -60,10 +68,16 @@ function formatDate(raw?: string | null) {
   if (!raw) return "-";
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return raw;
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return `${year}/${month}/${day}`;
 }
 
 export default function App() {
+  const siteName = import.meta.env.VITE_SITE_NAME || "GL Library";
+  const headerName = import.meta.env.VITE_HEADER_NAME || siteName;
+  const logoSrc = import.meta.env.VITE_APP_LOGO || "";
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState("");
@@ -73,6 +87,7 @@ export default function App() {
   const [removingId, setRemovingId] = useState<number | null>(null);
 
   const [knownCategories, setKnownCategories] = useState<string[]>([]);
+  const [knownLangs, setKnownLangs] = useState<string[]>([]);
 
   const [editing, setEditing] = useState<Book | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
@@ -99,6 +114,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("theme", theme);
+    document.title = siteName;
   }, [theme]);
 
   const coverSrc = (book: Book) => {
@@ -124,11 +140,15 @@ export default function App() {
       // Snapshot categories only when the view is "unfiltered".
       if (!query.trim() && !lang && !category) {
         const uniq = new Set<string>();
+        const langSet = new Set<string>();
         for (const b of data.items) {
           const v = (b.category || "").trim();
           if (v) uniq.add(v);
+          const lv = (b.lang || "").trim();
+          if (lv) langSet.add(lv);
         }
         setKnownCategories(Array.from(uniq).sort((a, b) => a.localeCompare(b)));
+        setKnownLangs(Array.from(langSet).sort((a, b) => a.localeCompare(b)));
       }
     };
     run().catch((err) => {
@@ -144,11 +164,24 @@ export default function App() {
     return knownCategories.includes(category) ? knownCategories : [category, ...knownCategories];
   }, [category, knownCategories]);
 
+  const langOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const opt of baseLangOptions) {
+      seen.set(opt.value, opt.label);
+    }
+    for (const value of knownLangs) {
+      if (!seen.has(value)) {
+        seen.set(value, value.toUpperCase());
+      }
+    }
+    return Array.from(seen.entries()).map(([value, label]) => ({ value, label }));
+  }, [knownLangs]);
+
   const openEdit = (book: Book) => {
     setEditing(book);
     setEditForm({
-      title: book.title || "",
-      author: book.author || "",
+      title: (book.title && book.title.trim()) || book.file_name || "",
+      author: (book.author && book.author.trim()) || "",
       lang: book.lang || "",
       tags: book.tags || "",
       category: book.category || "",
@@ -228,8 +261,12 @@ export default function App() {
       <header className="topbar">
         <div className="shell topbar-inner">
           <div className="brand">
-            <div className="brand-mark" aria-hidden="true" />
-            <div className="brand-title">GL Library</div>
+            {logoSrc ? (
+              <img className="brand-mark" src={logoSrc} alt="logo" />
+            ) : (
+              <div className="brand-mark" aria-hidden="true" />
+            )}
+            <div className="brand-title">{headerName}</div>
           </div>
 
           <div className="searchbar" role="search">
@@ -346,13 +383,13 @@ export default function App() {
                       ))}
                     </div>
                     <div className="book-meta">
-                      <span>Source: {book.source || "tg"}</span>
+                      <span>{book.source || "Unknown"}</span>
                       <span className="sep">·</span>
-                      <span>Added {formatDate(book.updated_at)}</span>
+                      <span>{formatDate(book.updated_at)}</span>
                       <span className="sep">·</span>
-                      <span>
-                        {book.lang ? book.lang.toUpperCase() : "ALL"} / {formatSize(book.file_size)}
-                      </span>
+                      <span>{book.lang ? book.lang.toUpperCase() : "Unknown"}</span>
+                      <span className="sep">·</span>
+                      <span>{formatSize(book.file_size)}</span>
                     </div>
                   </div>
 
@@ -391,28 +428,44 @@ export default function App() {
             <div className="modal-grid">
               <label>
                 Title
-                <input value={editForm.title} onChange={(e) => setEditForm((s) => ({ ...s, title: e.target.value }))} />
+                <input
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((s) => ({ ...s, title: e.target.value }))}
+                  placeholder="Title"
+                />
               </label>
               <label>
                 Author
                 <input
                   value={editForm.author}
                   onChange={(e) => setEditForm((s) => ({ ...s, author: e.target.value }))}
+                  placeholder="Unknown"
                 />
               </label>
               <label>
                 Lang
-                <input value={editForm.lang} onChange={(e) => setEditForm((s) => ({ ...s, lang: e.target.value }))} />
+                <select value={editForm.lang} onChange={(e) => setEditForm((s) => ({ ...s, lang: e.target.value }))}>
+                  {langOptions.map((opt) => (
+                    <option key={opt.value || "unset"} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 Tags
-                <input value={editForm.tags} onChange={(e) => setEditForm((s) => ({ ...s, tags: e.target.value }))} />
+                <input
+                  value={editForm.tags}
+                  onChange={(e) => setEditForm((s) => ({ ...s, tags: e.target.value }))}
+                  placeholder="tag1, tag2"
+                />
               </label>
               <label>
                 Category
                 <input
                   value={editForm.category}
                   onChange={(e) => setEditForm((s) => ({ ...s, category: e.target.value }))}
+                  placeholder="Optional"
                 />
               </label>
               <label>
@@ -445,4 +498,3 @@ export default function App() {
     </div>
   );
 }
-
