@@ -21,11 +21,20 @@ type BooksResponse = {
   items: Book[];
 };
 
-const langOptions = [
-  { value: "", label: "All" },
+const langTabs = [
+  { value: "", label: "ALL" },
+  { value: "en", label: "EN" },
   { value: "zh", label: "中文" },
-  { value: "en", label: "English" },
-];
+] as const;
+
+type Theme = "light" | "dark";
+
+function getInitialTheme(): Theme {
+  const saved = localStorage.getItem("theme");
+  if (saved === "light" || saved === "dark") return saved;
+  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+  return prefersDark ? "dark" : "light";
+}
 
 function formatSize(size?: number | null) {
   if (!size) return "-";
@@ -41,7 +50,10 @@ function formatSize(size?: number | null) {
 
 function splitTags(tags?: string | null) {
   if (!tags) return [];
-  return tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+  return tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function formatDate(raw?: string | null) {
@@ -52,13 +64,16 @@ function formatDate(raw?: string | null) {
 }
 
 export default function App() {
+  const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState("");
   const [category, setCategory] = useState("");
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<number | null>(null);
+
   const [knownCategories, setKnownCategories] = useState<string[]>([]);
+
   const [editing, setEditing] = useState<Book | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
@@ -81,74 +96,53 @@ export default function App() {
     return params.get("admin") === "1" && adminKey.length > 0;
   }, [adminKey]);
 
-  const loadBooks = async (opts?: { query?: string; lang?: string; category?: string }) => {
-    const q = opts?.query ?? query;
-    const l = opts?.lang ?? lang;
-    const c = opts?.category ?? category;
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (q.trim()) params.set("query", q.trim());
-    if (l) params.set("lang", l);
-    if (c) params.set("category", c);
-    params.set("limit", "200");
-    const res = await fetch(`/api/books?${params.toString()}`);
-    const data: BooksResponse = await res.json();
-    setBooks(data.items);
-    setLoading(false);
+  const coverSrc = (book: Book) => {
+    if (book.cover) return book.cover;
+    if (book.cover_file_id) return `/api/books/${book.id}/cover`;
+    return "";
   };
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
+    const controller = new AbortController();
+    const run = async () => {
       setLoading(true);
       const params = new URLSearchParams();
       if (query.trim()) params.set("query", query.trim());
       if (lang) params.set("lang", lang);
       if (category) params.set("category", category);
       params.set("limit", "200");
-      const res = await fetch(`/api/books?${params.toString()}`);
+      const res = await fetch(`/api/books?${params.toString()}`, { signal: controller.signal });
       const data: BooksResponse = await res.json();
-      if (!cancelled) {
-        setBooks(data.items);
-        setLoading(false);
+      setBooks(data.items);
+      setLoading(false);
+
+      // Snapshot categories only when the view is "unfiltered".
+      if (!query.trim() && !lang && !category) {
+        const uniq = new Set<string>();
+        for (const b of data.items) {
+          const v = (b.category || "").trim();
+          if (v) uniq.add(v);
+        }
+        setKnownCategories(Array.from(uniq).sort((a, b) => a.localeCompare(b)));
       }
     };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [query, lang, category]);
-
-  const removeBook = async (book: Book) => {
-    if (!confirm("Remove this item from TG and the database?")) return;
-    setRemovingId(book.id);
-    await fetch(`/api/books/${book.id}?also_tg=true&key=${encodeURIComponent(adminKey)}`, {
-      method: "DELETE",
+    run().catch((err) => {
+      if (err?.name === "AbortError") return;
+      setLoading(false);
+      console.error(err);
     });
-    setRemovingId(null);
-    await loadBooks();
-  };
+    return () => controller.abort();
+  }, [category, lang, query]);
 
-  const categoryOptions = useMemo(() => {
-    const uniq = new Set<string>();
-    for (const b of books) {
-      const v = (b.category || "").trim();
-      if (v) uniq.add(v);
-    }
-    return Array.from(uniq).sort((a, b) => a.localeCompare(b));
-  }, [books]);
-
-  useEffect(() => {
-    // Keep a stable list of categories so you can switch between them even when filtered.
-    if (!category) setKnownCategories(categoryOptions);
-  }, [category, categoryOptions]);
-
-  const categoryOptionsForSelect = useMemo(() => {
-    const base = knownCategories.length ? knownCategories : categoryOptions;
-    if (!category) return base;
-    return base.includes(category) ? base : [category, ...base];
-  }, [category, categoryOptions, knownCategories]);
+  const categoryTabs = useMemo(() => {
+    if (!category) return knownCategories;
+    return knownCategories.includes(category) ? knownCategories : [category, ...knownCategories];
+  }, [category, knownCategories]);
 
   const openEdit = (book: Book) => {
     setEditing(book);
@@ -176,6 +170,17 @@ export default function App() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [editing]);
+
+  const reloadBooks = async () => {
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("query", query.trim());
+    if (lang) params.set("lang", lang);
+    if (category) params.set("category", category);
+    params.set("limit", "200");
+    const res = await fetch(`/api/books?${params.toString()}`);
+    const data: BooksResponse = await res.json();
+    setBooks(data.items);
+  };
 
   const saveEdit = async () => {
     if (!editing) return;
@@ -205,125 +210,178 @@ export default function App() {
     }
 
     closeEdit();
-    await loadBooks();
+    await reloadBooks();
   };
 
-  const coverSrc = (book: Book) => {
-    if (book.cover) return book.cover;
-    if (book.cover_file_id) return `/api/books/${book.id}/cover`;
-    return "";
+  const removeBook = async (book: Book) => {
+    if (!confirm("Remove this item from TG and the database?")) return;
+    setRemovingId(book.id);
+    await fetch(`/api/books/${book.id}?also_tg=true&key=${encodeURIComponent(adminKey)}`, {
+      method: "DELETE",
+    });
+    setRemovingId(null);
+    await reloadBooks();
   };
 
   return (
-    <div className="app">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">ThaiGL Library</p>
-          <h1>Thai GL collection with fast search, clean metadata, and calm reading rooms.</h1>
-        </div>
-          <div className="hero-panel">
-            <div className="search">
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search title, author, tags"
+    <div className={adminMode ? "app is-admin" : "app"}>
+      <header className="topbar">
+        <div className="shell topbar-inner">
+          <div className="brand">
+            <div className="brand-mark" aria-hidden="true" />
+            <div className="brand-title">GL Library</div>
+          </div>
+
+          <div className="searchbar" role="search">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search title, author, tags..."
+              aria-label="Search"
+            />
+            <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M10.5 3a7.5 7.5 0 1 0 4.6 13.4l4 4a1 1 0 0 0 1.4-1.4l-4-4A7.5 7.5 0 0 0 10.5 3Zm0 2a5.5 5.5 0 1 1 0 11a5.5 5.5 0 0 1 0-11Z"
+                fill="currentColor"
               />
-              <select value={lang} onChange={(event) => setLang(event.target.value)}>
-                {langOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select value={category} onChange={(event) => setCategory(event.target.value)}>
-                <option value="">All categories</option>
-                {categoryOptionsForSelect.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
+            </svg>
+          </div>
+
+          <div className="topbar-actions">
+            <div className="lang-tabs" role="group" aria-label="Language">
+              {langTabs.map((tab) => (
+                <button
+                  key={tab.value}
+                  className={lang === tab.value ? "tab is-active" : "tab"}
+                  onClick={() => setLang(tab.value)}
+                  type="button"
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            {adminMode && <p className="admin-pill">Admin mode</p>}
-            <div className="hero-stats">
-              <div>
-                <p className="stat-value">{books.length}</p>
-                <p className="stat-label">Visible titles</p>
-              </div>
-            <div>
-              <p className="stat-value">{lang ? lang.toUpperCase() : "ALL"}</p>
-              <p className="stat-label">Language</p>
-            </div>
+
+            <button
+              className="icon-btn"
+              type="button"
+              onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+            >
+              {theme === "dark" ? (
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M12 18a6 6 0 1 1 0-12a6 6 0 0 1 0 12Zm0-16a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1Zm10-9a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1ZM4 12a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1Zm15.07 7.07a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0ZM7.05 7.05a1 1 0 0 1 0 1.41l-.71.71A1 1 0 1 1 4.93 7.76l.71-.71a1 1 0 0 1 1.41 0ZM19.07 4.93a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0ZM7.05 16.95a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0Z"
+                  />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M21 14.5A7.5 7.5 0 0 1 9.5 3a1 1 0 0 0-1.2 1.2A9.5 9.5 0 1 0 22.2 15.7a1 1 0 0 0-1.2-1.2Z"
+                  />
+                </svg>
+              )}
+            </button>
+
+            {adminMode && <div className="admin-badge">Admin</div>}
           </div>
         </div>
       </header>
 
-      <main className="layout">
-        <section className="grid">
-          {loading && <div className="loading">Loading library...</div>}
-          {!loading && books.length === 0 && <div className="empty">No titles found.</div>}
-          {books.map((book) => (
-            <article
-              key={book.id}
-              className="card"
-            >
-              <div className="card-cover">
-                {coverSrc(book) ? (
-                  <img
-                    src={coverSrc(book)}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div className="card-cover-placeholder" />
-                )}
-              </div>
-              <div className="card-title">{book.title || book.file_name || "Untitled"}</div>
-              <div className="card-subtitle">
-                <span>{book.author || "Unknown"}</span>
-                <span className="divider">·</span>
-                <span>{book.source || "tg"}</span>
-              </div>
-              <div className="card-meta">
-                <span>{book.lang?.toUpperCase() || "-"}</span>
-                <span>{formatSize(book.file_size)}</span>
-                <span>{formatDate(book.updated_at)}</span>
-              </div>
-              {book.category && <div className="card-category">{book.category}</div>}
-              <div className="card-file">{book.file_name || "Untitled file"}</div>
-              <div className="card-tags">
-                {splitTags(book.tags).slice(0, 3).map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
-                {splitTags(book.tags).length > 3 && <span>+{splitTags(book.tags).length - 3}</span>}
-              </div>
-              <div className="card-actions">
-                <a className="download" href={`/api/books/${book.id}/download`}>
-                  Download
-                </a>
-                <span>{book.mime_type || "-"}</span>
-                {adminMode && (
-                  <button className="edit" onClick={() => openEdit(book)}>
-                    Edit
-                  </button>
-                )}
-                {adminMode && (
-                  <button
-                    className="remove"
-                    onClick={() => removeBook(book)}
-                    disabled={removingId === book.id}
-                  >
-                    {removingId === book.id ? "Removing..." : "Remove"}
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-        </section>
+      <nav className="shell category-row" aria-label="Categories">
+        <button className={!category ? "cat is-active" : "cat"} onClick={() => setCategory("")} type="button">
+          All Category
+        </button>
+        {categoryTabs.map((value) => (
+          <button
+            key={value}
+            className={category === value ? "cat is-active" : "cat"}
+            onClick={() => setCategory(value)}
+            type="button"
+          >
+            {value}
+          </button>
+        ))}
+      </nav>
+
+      <main className="shell content">
+        {loading && <div className="empty-state">Loading...</div>}
+        {!loading && books.length === 0 && <div className="empty-state">No results.</div>}
+        {!loading && books.length > 0 && (
+          <section className="book-list" aria-label="Books">
+            {books.map((book) => {
+              const src = coverSrc(book);
+              return (
+                <article key={book.id} className={adminMode ? "book-row is-admin" : "book-row"}>
+                  <div className="book-cover" aria-hidden="true">
+                    {src && (
+                      <img
+                        src={src}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div className="book-main">
+                    <div className="book-title">
+                      {book.title || book.file_name || "Untitled"}
+                      {book.mime_type && <span className="book-format">{book.mime_type}</span>}
+                    </div>
+                    <div className="book-sub">
+                      <span className="muted">by</span> {book.author || "Unknown"}
+                      {book.category && <span className="chip">{book.category}</span>}
+                    </div>
+                    <div className="book-tags">
+                      {splitTags(book.tags).slice(0, 6).map((tag) => (
+                        <span key={tag} className="tag">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="book-meta">
+                      <span>Source: {book.source || "tg"}</span>
+                      <span className="sep">·</span>
+                      <span>Added {formatDate(book.updated_at)}</span>
+                      <span className="sep">·</span>
+                      <span>
+                        {book.lang ? book.lang.toUpperCase() : "ALL"} / {formatSize(book.file_size)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="book-actions">
+                    <div className="book-file">{book.file_name || ""}</div>
+                    <a className="download-btn" href={`/api/books/${book.id}/download`}>
+                      Download
+                    </a>
+                    {adminMode && (
+                      <div className="admin-actions">
+                        <button className="btn-edit" onClick={() => openEdit(book)} type="button">
+                          Edit
+                        </button>
+                        <button
+                          className="btn-remove"
+                          onClick={() => removeBook(book)}
+                          disabled={removingId === book.id}
+                          type="button"
+                        >
+                          {removingId === book.id ? "Removing..." : "Remove"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+        )}
       </main>
 
       {editing && (
@@ -387,3 +445,4 @@ export default function App() {
     </div>
   );
 }
+
