@@ -385,6 +385,28 @@ html[data-theme="dark"] .cat:hover {
   padding: 20px 0 64px;
 }
 
+.site-footer {
+  padding: 18px 0 28px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.site-footer a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.site-footer a:hover {
+  color: var(--text);
+}
+
 .empty-state {
   background: var(--surface);
   border: 1px solid var(--border);

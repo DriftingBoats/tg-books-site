@@ -74,6 +74,22 @@ function formatDate(raw?: string | null) {
   return `${year}/${month}/${day}`;
 }
 
+function renderFooterText(raw: string) {
+  const text = raw.trim();
+  // Minimal markdown support: a single link like `[label](https://example.com)`.
+  const m = text.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
+  if (m) {
+    const label = m[1];
+    const href = m[2];
+    return (
+      <a href={href} target="_blank" rel="noreferrer">
+        {label}
+      </a>
+    );
+  }
+  return text;
+}
+
 type AppConfig = {
   site_name: string;
   header_name: string;
@@ -81,6 +97,7 @@ type AppConfig = {
   apple_icon: string;
   logo: string;
   default_cover: string;
+  footer_text: string;
 };
 
 const defaultConfig: AppConfig = {
@@ -90,6 +107,7 @@ const defaultConfig: AppConfig = {
   apple_icon: "/favicon.ico",
   logo: "",
   default_cover: "",
+  footer_text: "",
 };
 
 export default function App() {
@@ -489,6 +507,12 @@ export default function App() {
           </section>
         )}
       </main>
+
+      {config.footer_text?.trim() ? (
+        <footer className="shell site-footer" aria-label="Footer">
+          {renderFooterText(config.footer_text)}
+        </footer>
+      ) : null}
 
       {editing && (
         <div className="modal-backdrop" onMouseDown={closeEdit}>

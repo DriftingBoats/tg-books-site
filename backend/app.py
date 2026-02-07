@@ -84,6 +84,7 @@ def get_config() -> Dict[str, str]:
         "apple_icon": apple_icon,
         "logo": logo,
         "default_cover": settings.default_cover,
+        "footer_text": settings.footer_text,
     }
 
 
