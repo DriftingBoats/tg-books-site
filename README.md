@@ -1,81 +1,222 @@
-# ThaiGL Library (Phase 1)
+# TG Books Site
 
-## Overview
-Phase 1 provides a read-only library UI backed by Telegram group metadata. The backend syncs `document` messages from a book group, caches metadata in SQLite, and serves the data for fast search.
+A self-hosted “Telegram as storage” library site.
+
+- Upload `document` files (PDF/EPUB/...) into a Telegram group/channel
+- FastAPI backend syncs metadata into SQLite and proxies downloads/covers
+- React (Vite) frontend supports fuzzy search, language/category filters, admin edit/remove
+
+This repo is designed for the common scenario: your server can access Telegram, but end users cannot. Users browse/search on the website; downloads are proxied by the backend.
+
+## Features
+- Telegram sync:
+  - Reads `document` messages
+  - Parses caption into metadata (title/author/lang/tags/category/source)
+  - Stores in SQLite + FTS search
+  - Proxies file download via `/api/books/{id}/download`
+  - Proxies Telegram thumbnail as cover via `/api/books/{id}/cover` with local caching
+- UI:
+  - Search (title/author/tags)
+  - Language tabs (ALL / EN / 中文)
+  - Category filter (desktop chips; mobile dropdown)
+  - Metadata editing modal (admin mode)
+  - Remove (admin mode) with optional Telegram delete
+  - “Back to top” button
+- Optional auto-cleanup:
+  - Telegram doesn’t push “message deleted” events to bots
+  - This project periodically verifies message existence and deletes stale DB entries
 
 ## Requirements
 - Python 3.10+
-- Node 18+
-- Telegram bot token and book group chat id
+- Node 18+ (Node 20+ recommended)
+- A Telegram bot token
+- A Telegram group/channel `chat_id`
 
-## Env
-Create a `.env` or export variables:
-
-```
-TG_BOT_TOKEN=...
-TG_BOOK_CHAT_ID=...   # group id like -1001234567890
-TG_MAINT_CHAT_ID=...  # maintenance group id for cleanup (optional)
-THAIGL_DB_PATH=./data/thaigl.db
-THAIGL_COVER_DIR=./data/covers
-FRONTEND_DIST=./frontend/dist
-TG_CLEANUP_INTERVAL=0  # seconds; set to >0 to enable auto cleanup
-THAIGL_ADMIN_KEY=...   # required for delete endpoint if set
-THAIGL_SITE_NAME=GL Library
-THAIGL_HEADER_NAME=GL Library
-THAIGL_APP_ICON=/icons/favicon.png
-THAIGL_APPLE_ICON=/icons/apple-touch-icon.png
-THAIGL_LOGO=/icons/logo.png
-THAIGL_DEFAULT_COVER=/icons/default-cover.png
-```
-
-## Backend
-```
-python -m venv .venv
+## Quick Start (Local)
+1. Backend:
+```bash
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python -m backend.main
 ```
 
-## Frontend
-```
+2. Frontend dev server:
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## Caption format
-Each Telegram `document` message should have a caption like:
+Notes:
+- The dev proxy target is configured in `/Users/wangmingming/Documents/GitHub/thaigl-site/frontend/vite.config.ts`. If your backend runs on a different port, update it.
+- For production, build the frontend and let the backend serve it via `FRONTEND_DIST`.
 
+## Env Vars
+Create `.env` (do NOT commit secrets) or export variables.
+
+Required:
+```bash
+TG_BOT_TOKEN=...          # bot token from BotFather
+TG_BOOK_CHAT_ID=...       # group/channel id like -1001234567890
+THAIGL_DB_PATH=./data/thaigl.db
+FRONTEND_DIST=./frontend/dist
 ```
-Title: ...
-Author: ...
-Lang: zh/en
-Tags: tag1, tag2
-Category: ...
-Source: tg
+
+Recommended:
+```bash
+THAIGL_PORT=8963          # backend port
+THAIGL_RELOAD=0           # set to 1 for dev auto-reload
+THAIGL_COVER_DIR=./data/covers
+THAIGL_ADMIN_KEY=...      # enable admin APIs + UI with ?admin=1&key=...
 ```
+
+Branding (served by `/api/config` at runtime; no rebuild required):
+```bash
+THAIGL_SITE_NAME=GL Library
+THAIGL_HEADER_NAME=GL Library
+THAIGL_APP_ICON=/img/favicon.png
+THAIGL_APPLE_ICON=/img/logo.png
+THAIGL_LOGO=/img/logo.png
+THAIGL_DEFAULT_COVER=/img/cover.png
+```
+
+Auto cleanup (optional):
+```bash
+TG_MAINT_CHAT_ID=...       # a private bot-only “maintenance” chat/group/channel
+TG_CLEANUP_INTERVAL=3600   # seconds; set >0 to enable cleanup
+```
+
+## How To Get `TG_BOOK_CHAT_ID`
+You can only “see” a chat id after the bot has received at least one update from that chat.
+
+1. Add the bot to the target group/channel.
+2. In the target chat, send a command such as `/start` (commands work even when bot privacy mode is enabled).
+3. On the server:
+```bash
+curl -s "https://api.telegram.org/bot$TG_BOT_TOKEN/getUpdates" | python3 -m json.tool
+```
+Find:
+- Group: `result[].message.chat.id`
+- Channel: `result[].channel_post.chat.id` (bot must be channel admin)
+
+If you always see `{"ok":true,"result":[]}`:
+- You are not sending messages to the same bot token (`getMe` can confirm bot username)
+- Or the bot is not in that chat
+- Or for channels: the bot is not an admin
+
+## Caption Format
+Send a `document` with caption:
+```text
+Title: One Shot_ Rubik
+Author: Zezeho
+Lang: en
+Tags: gl, romance, short
+Category: OneShot
+Source: DriftingBoats
+```
+
+Supported `Lang` examples (case-insensitive):
+- `en`
+- `zh`
+- `th`
 
 Notes:
-- `Source:` is optional. If omitted, the backend will use the sender's Telegram username (if available).
-- `Tags:` / `Category:` are optional.
+- If caption is empty:
+  - Title defaults to Telegram `file_name`
+  - Author defaults to `Unknown`
+  - Source defaults to sender username (if available)
+- You can also write everything on one line:
+```text
+Title: ... | Author: ... | Lang: en | Tags: ... | Category: ... | Source: ...
+```
 
-## Auto cleanup
-Telegram does not notify bots about deletions. Auto cleanup is implemented by
-attempting to copy each message to a maintenance group. If the copy fails with
-\"message to copy not found\", the record is removed from the database.
+## Admin Mode
+Frontend admin mode is enabled by adding query params:
+`?admin=1&key=YOUR_KEY`
 
-Set `TG_MAINT_CHAT_ID` and `TG_CLEANUP_INTERVAL` (seconds) to enable this.
+Backend authorization:
+- If `THAIGL_ADMIN_KEY` is set, admin endpoints require `?key=...`
+- If `THAIGL_ADMIN_KEY` is empty, admin endpoints are effectively open (not recommended)
 
-## Admin delete
-Enable admin mode with `?admin=1&key=YOUR_KEY`. The backend checks `THAIGL_ADMIN_KEY`
-for delete requests.
+Admin capabilities:
+- Edit metadata (title/author/lang/tags/category/source/cover URL)
+- Remove a book (delete from DB, optionally delete the Telegram message)
 
-## Icons
-Place icon assets under `frontend/public/icons/`. Update the `THAIGL_*` icon env vars
-to point to those paths (for example `/icons/logo.png`).
+Telegram command remove:
+- In the book group, send `/remove <message_id>`, or reply to the target message with `/remove`
 
-Admin mode also supports editing book metadata (title/author/lang/tags/source/category/cover URL).
+## Auto Cleanup (Stale DB Entries)
+Telegram bots do not receive deletion events. Cleanup is implemented by periodically trying to `copyMessage` each stored message into `TG_MAINT_CHAT_ID`.
 
-## Notes
-- Bot must be admin and privacy mode disabled in the book group.
-- Phase 2 will add PDF margin tools and translation flow.
+If `copyMessage` fails with “message not found” / “MESSAGE_ID_INVALID”, the DB record is removed.
+
+Tradeoffs:
+- This is a best-effort heuristic
+- Requires a maintenance chat id that the bot can write to
+
+## Production Build
+Build frontend:
+```bash
+cd frontend
+npm ci
+npm run build
+```
+
+Run backend (serves `FRONTEND_DIST` as `/` when configured):
+```bash
+source .venv/bin/activate
+python -m backend.main
+```
+
+## Deployment (systemd example)
+This is a minimal example; adjust paths/ports.
+
+Create env file (use `sudo tee` so redirection works):
+```bash
+sudo mkdir -p /etc/thaigl
+cat <<'EOF' | sudo tee /etc/thaigl/thaigl.env >/dev/null
+TG_BOT_TOKEN=...
+TG_BOOK_CHAT_ID=...
+THAIGL_DB_PATH=/opt/tg-books-site/data/thaigl.db
+THAIGL_COVER_DIR=/opt/tg-books-site/data/covers
+FRONTEND_DIST=/opt/tg-books-site/frontend/dist
+THAIGL_PORT=8963
+THAIGL_ADMIN_KEY=...
+TG_CLEANUP_INTERVAL=3600
+TG_MAINT_CHAT_ID=...
+EOF
+```
+
+`/etc/systemd/system/thaigl.service`:
+```ini
+[Unit]
+Description=TG Books Site
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/tg-books-site
+EnvironmentFile=/etc/thaigl/thaigl.env
+ExecStart=/opt/tg-books-site/.venv/bin/python -m backend.main
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now thaigl
+sudo systemctl status thaigl --no-pager
+```
+
+## Security Notes
+- Treat `TG_BOT_TOKEN` like a password. If it leaks, regenerate it in BotFather.
+- Never commit `.env` into git.
+- Admin mode is protected only by `THAIGL_ADMIN_KEY` (a shared secret in URL). Use a long random key and serve the site behind HTTPS.
+
+## License
+Choose a license (MIT/Apache-2.0/etc) before publishing broadly.
