@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
+from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
@@ -30,6 +32,29 @@ if settings.cleanup_interval > 0 and not settings.maint_chat_id:
 db = Database(settings.db_path)
 
 app = FastAPI(title="ThaiGL Library")
+
+_ASCII_FILENAME_FALLBACK = re.compile(r"[^A-Za-z0-9._ -]+")
+
+
+def _content_disposition_attachment(filename: str) -> str:
+    """
+    Build a RFC 6266 / RFC 5987 compatible Content-Disposition header value.
+
+    Starlette encodes headers as latin-1; if we include raw non-ascii characters
+    in `filename="..."`, it raises UnicodeEncodeError and returns 500.
+    """
+    # Ensure we only use the leaf name; avoid path traversal in headers.
+    name = Path(filename).name
+    name = re.sub(r"[\r\n]+", " ", name).strip() or "download"
+
+    # ASCII fallback for legacy clients. Keep it conservative and header-safe.
+    fallback = name.encode("ascii", "ignore").decode("ascii")
+    fallback = _ASCII_FILENAME_FALLBACK.sub("_", fallback)
+    fallback = fallback.replace("\\", "_").replace('"', "_").strip() or "download"
+
+    # RFC 5987: percent-encoded UTF-8.
+    utf8 = quote(name, safe="")
+    return f'attachment; filename="{fallback}"; filename*=UTF-8\'\'{utf8}'
 
 
 @app.on_event("startup")
@@ -98,11 +123,18 @@ def download_book(book_id: int) -> StreamingResponse:
     if not settings.bot_token:
         raise HTTPException(status_code=500, detail="Bot token missing")
     client = TelegramClient(settings.bot_token)
-    info = client.get_file(file_id)
-    file_path = info["result"]["file_path"]
+    try:
+        info = client.get_file(file_id)
+    except Exception as e:
+        logger.exception("Telegram getFile failed for book_id=%s", book_id)
+        raise HTTPException(status_code=502, detail=f"Telegram getFile failed: {e!s}")
+    file_path = (info.get("result") or {}).get("file_path")
+    if not file_path:
+        raise HTTPException(status_code=502, detail="Telegram getFile returned no file_path")
     filename = row["file_name"] or file_path.split("/")[-1]
-    headers = {"Content-Disposition": f"attachment; filename=\"{filename}\""}
-    return StreamingResponse(client.stream_file(file_path), headers=headers)
+    headers = {"Content-Disposition": _content_disposition_attachment(filename)}
+    media_type = row["mime_type"] or "application/octet-stream"
+    return StreamingResponse(client.stream_file(file_path), headers=headers, media_type=media_type)
 
 
 def _guess_media_type(file_path: str) -> str:
