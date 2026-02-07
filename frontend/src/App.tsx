@@ -443,7 +443,6 @@ export default function App() {
                     )}
                     <div className="book-sub">
                       <span className="muted">by</span> {book.author || "Unknown"}
-                      {book.category && <span className="chip">{book.category}</span>}
                     </div>
                     <div className="book-tags">
                       {splitTags(book.tags).slice(0, 6).map((tag) => (
