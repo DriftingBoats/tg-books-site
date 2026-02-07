@@ -127,6 +127,8 @@ export default function App() {
     return params.get("admin") === "1" && adminKey.length > 0;
   }, [adminKey]);
 
+  const [showTop, setShowTop] = useState(false);
+
   useEffect(() => {
     const applyIcons = (rel: string, href: string) => {
       if (!href) return;
@@ -161,6 +163,13 @@ export default function App() {
     localStorage.setItem("theme", theme);
     document.title = config.site_name;
   }, [theme, config.site_name]);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 320);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const coverSrc = (book: Book) => {
     if (book.cover) return book.cover;
@@ -314,22 +323,22 @@ export default function App() {
             <div className="brand-title">{config.header_name}</div>
           </div>
 
-          <div className="searchbar" role="search">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search title, author, tags..."
-              aria-label="Search"
-            />
-            <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M10.5 3a7.5 7.5 0 1 0 4.6 13.4l4 4a1 1 0 0 0 1.4-1.4l-4-4A7.5 7.5 0 0 0 10.5 3Zm0 2a5.5 5.5 0 1 1 0 11a5.5 5.5 0 0 1 0-11Z"
-                fill="currentColor"
+          <div className="topbar-secondary">
+            <div className="searchbar" role="search">
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search title, author, tags..."
+                aria-label="Search"
               />
-            </svg>
-          </div>
+              <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M10.5 3a7.5 7.5 0 1 0 4.6 13.4l4 4a1 1 0 0 0 1.4-1.4l-4-4A7.5 7.5 0 0 0 10.5 3Zm0 2a5.5 5.5 0 1 1 0 11a5.5 5.5 0 0 1 0-11Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </div>
 
-          <div className="topbar-actions">
             <div className="lang-tabs" role="group" aria-label="Language">
               {langTabs.map((tab) => (
                 <button
@@ -342,7 +351,9 @@ export default function App() {
                 </button>
               ))}
             </div>
+          </div>
 
+          <div className="topbar-tools">
             <button
               className="icon-btn"
               type="button"
@@ -373,6 +384,16 @@ export default function App() {
       </header>
 
       <nav className="shell category-row" aria-label="Categories">
+        <div className="category-select-wrap">
+          <select className="category-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">All Category</option>
+            {categoryTabs.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </div>
         <button className={!category ? "cat is-active" : "cat"} onClick={() => setCategory("")} type="button">
           All Category
         </button>
@@ -413,9 +434,13 @@ export default function App() {
 
                   <div className="book-main">
                     <div className="book-title">
-                      {book.title || book.file_name || "Untitled"}
-                      {book.mime_type && <span className="book-format">{book.mime_type}</span>}
+                      <span className="book-title-text">{book.title || book.file_name || "Untitled"}</span>
                     </div>
+                    {book.mime_type && (
+                      <div className="book-format-row">
+                        <span className="book-format">{book.mime_type}</span>
+                      </div>
+                    )}
                     <div className="book-sub">
                       <span className="muted">by</span> {book.author || "Unknown"}
                       {book.category && <span className="chip">{book.category}</span>}
@@ -540,6 +565,21 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <button
+        className={showTop ? "back-top is-visible" : "back-top"}
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Back to top"
+        title="Back to top"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M12 5.5 6.5 11a1 1 0 1 0 1.4 1.4l3.1-3.1V19a1 1 0 1 0 2 0V9.3l3.1 3.1a1 1 0 0 0 1.4-1.4L12 5.5Z"
+          />
+        </svg>
+      </button>
     </div>
   );
 }
